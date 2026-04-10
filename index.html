@@ -651,6 +651,53 @@ body {
   background: rgba(255,255,255,0.06);
 }
 
+/* ─── 访问码遮罩 ─── */
+#lock-overlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 9998;
+  background: rgba(6,14,31,0.97);
+  backdrop-filter: blur(20px);
+  align-items: center; justify-content: center;
+  padding: 24px;
+}
+#lock-overlay.show { display: flex; }
+.lock-box {
+  background: #0a1628;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 24px;
+  padding: 48px 40px;
+  width: 100%; max-width: 400px;
+  text-align: center;
+}
+.lock-box-icon { font-size: 40px; margin-bottom: 20px; }
+.lock-box-title { font-size: 22px; font-weight: 900; color: #fff; margin-bottom: 8px; }
+.lock-box-sub { font-size: 14px; color: rgba(255,255,255,0.4); margin-bottom: 32px; line-height: 1.7; }
+.lock-box input {
+  width: 100%; padding: 14px 20px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px; font-size: 18px;
+  color: #fff; text-align: center;
+  letter-spacing: 4px; outline: none;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+.lock-box input:focus { border-color: rgba(55,137,230,0.5); }
+.lock-box input.error { border-color: rgba(239,68,68,0.6); animation: shake 0.3s; }
+@keyframes shake {
+  0%,100%{ transform:translateX(0) }
+  25%{ transform:translateX(-8px) }
+  75%{ transform:translateX(8px) }
+}
+.lock-box-btn {
+  width: 100%; margin-top: 16px; padding: 15px;
+  background: #3789E6; border: none; border-radius: 12px;
+  font-size: 15px; font-weight: 800; color: #fff;
+  cursor: pointer; transition: opacity 0.2s;
+}
+.lock-box-btn:hover { opacity: 0.88; }
+.lock-error { font-size: 13px; color: rgba(239,68,68,0.8); margin-top: 10px; min-height: 20px; }
+
 /* ══════════════════════════
    MOBILE RESPONSIVE  ≤768px
 ══════════════════════════ */
@@ -778,6 +825,19 @@ body {
 
 <!-- 进度条 -->
 <div id="progress-bar"></div>
+
+<!-- 访问码遮罩 -->
+<div id="lock-overlay">
+  <div class="lock-box">
+    <div class="lock-box-icon">🔒</div>
+    <div class="lock-box-title">请输入访问码</div>
+    <div class="lock-box-sub">此链接受访问码保护<br>请联系发送方获取访问码</div>
+    <input type="text" id="lock-input" placeholder="输入访问码" autocomplete="off"
+      onkeydown="if(event.key==='Enter') unlock()">
+    <button class="lock-box-btn" onclick="unlock()">确认解锁</button>
+    <div class="lock-error" id="lock-error"></div>
+  </div>
+</div>
 
 <!-- 顶部导航 -->
 <nav id="topnav">
@@ -1126,13 +1186,61 @@ body {
 </section>
 
 <script>
-// ─── URL 参数覆盖联系信息 ───
+// ─── 访问码解密逻辑 ───
+let _encData = null;
+
+async function deriveKey(code) {
+  const enc = new TextEncoder();
+  const mat = await crypto.subtle.importKey('raw', enc.encode(code), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name:'PBKDF2', salt: enc.encode('x27mini-salt'), iterations:100000, hash:'SHA-256' },
+    mat, { name:'AES-GCM', length:256 }, false, ['encrypt','decrypt']
+  );
+}
+async function decryptData(b64, code) {
+  const key = await deriveKey(code);
+  const combined = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+  const iv = combined.slice(0, 12), data = combined.slice(12);
+  const buf = await crypto.subtle.decrypt({ name:'AES-GCM', iv }, key, data);
+  return JSON.parse(new TextDecoder().decode(buf));
+}
+
+function fillContact(c) {
+  if (c.name)  document.getElementById('c-name').textContent  = c.name;
+  if (c.tel)   document.getElementById('c-tel').textContent   = c.tel;
+  if (c.wx)    document.getElementById('c-wx').textContent    = c.wx;
+  if (c.email) document.getElementById('c-email').textContent = c.email;
+}
+
+async function unlock() {
+  const code = document.getElementById('lock-input').value.trim();
+  const input = document.getElementById('lock-input');
+  if (!code) return;
+  try {
+    const contact = await decryptData(_encData, code);
+    fillContact(contact);
+    document.getElementById('lock-overlay').classList.remove('show');
+  } catch {
+    input.classList.add('error');
+    document.getElementById('lock-error').textContent = '访问码错误，请重试';
+    setTimeout(() => { input.classList.remove('error'); input.select(); }, 400);
+  }
+}
+
+// 页面加载时检查 URL
 (function() {
+  // 加密链接：#enc=...
+  const hash = window.location.hash;
+  if (hash.startsWith('#enc=')) {
+    _encData = decodeURIComponent(hash.slice(5));
+    document.getElementById('lock-overlay').classList.add('show');
+    setTimeout(() => document.getElementById('lock-input').focus(), 300);
+    return;
+  }
+  // 明文链接：?name=...
   const p = new URLSearchParams(window.location.search);
-  if (p.get('name'))  document.getElementById('c-name').textContent  = p.get('name');
-  if (p.get('tel'))   document.getElementById('c-tel').textContent   = p.get('tel');
-  if (p.get('wx'))    document.getElementById('c-wx').textContent    = p.get('wx');
-  if (p.get('email')) document.getElementById('c-email').textContent = p.get('email');
+  const c = { name: p.get('name'), tel: p.get('tel'), wx: p.get('wx'), email: p.get('email') };
+  if (c.name || c.tel) fillContact(c);
 })();
 
 // ─── 滚动进度条 ───
