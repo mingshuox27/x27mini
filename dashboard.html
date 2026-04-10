@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>X27MINI · 数据看板</title>
+<style>
+:root { --blue: #3789E6; --dark: #060e1f; --dark2: #0a1628; --green: #22c55e; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--dark); color: #fff;
+  min-height: 100vh; padding: 40px 32px;
+}
+
+/* ── 顶部 ── */
+.topbar {
+  display: flex; align-items: center;
+  justify-content: space-between; margin-bottom: 40px;
+}
+.topbar-left { display: flex; align-items: center; gap: 14px; }
+.topbar-title { font-size: 20px; font-weight: 900; }
+.topbar-sub { font-size: 12px; color: rgba(255,255,255,0.3); margin-top: 3px; letter-spacing: 1px; }
+.btn-refresh {
+  padding: 9px 20px; background: rgba(55,137,230,0.15);
+  border: 1px solid rgba(55,137,230,0.25); border-radius: 8px;
+  font-size: 13px; font-weight: 700; color: var(--blue);
+  cursor: pointer; transition: background 0.2s;
+}
+.btn-refresh:hover { background: rgba(55,137,230,0.25); }
+.btn-refresh.loading { opacity: 0.5; pointer-events: none; }
+
+/* ── 概览卡片 ── */
+.overview { display: flex; gap: 12px; margin-bottom: 32px; }
+.ov-card {
+  flex: 1; padding: 24px 28px;
+  background: var(--dark2);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
+}
+.ov-label { font-size: 11px; letter-spacing: 2px; color: rgba(255,255,255,0.3); text-transform: uppercase; margin-bottom: 10px; }
+.ov-num { font-size: 40px; font-weight: 900; color: #fff; line-height: 1; }
+.ov-num span { font-size: 18px; font-weight: 400; color: rgba(255,255,255,0.4); margin-left: 4px; }
+
+/* ── 表格 ── */
+.section-title {
+  font-size: 13px; font-weight: 700; letter-spacing: 2px;
+  color: rgba(255,255,255,0.3); text-transform: uppercase;
+  margin-bottom: 14px;
+}
+.table-wrap {
+  background: var(--dark2);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px; overflow: hidden;
+  margin-bottom: 32px;
+}
+table { width: 100%; border-collapse: collapse; }
+thead tr { border-bottom: 1px solid rgba(255,255,255,0.07); }
+thead th {
+  padding: 14px 20px; text-align: left;
+  font-size: 11px; letter-spacing: 2px;
+  color: rgba(255,255,255,0.3); text-transform: uppercase;
+  font-weight: 700;
+}
+tbody tr { border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.15s; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: rgba(255,255,255,0.03); }
+tbody td { padding: 16px 20px; font-size: 14px; color: rgba(255,255,255,0.85); }
+.td-name { font-weight: 700; color: #fff; }
+.td-count {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 36px; height: 28px; padding: 0 10px;
+  background: rgba(55,137,230,0.15); border-radius: 20px;
+  font-size: 13px; font-weight: 800; color: var(--blue);
+}
+.td-count.hot { background: rgba(239,68,68,0.15); color: #f87171; }
+.td-time { font-size: 12px; color: rgba(255,255,255,0.35); }
+.td-bar-wrap { width: 120px; }
+.td-bar {
+  height: 4px; background: rgba(255,255,255,0.06);
+  border-radius: 2px; overflow: hidden;
+}
+.td-bar-fill { height: 100%; background: var(--blue); border-radius: 2px; transition: width 0.8s ease; }
+
+/* ── 最近访问 ── */
+.log-item {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.log-item:last-child { border-bottom: none; }
+.log-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--blue); flex-shrink: 0;
+  box-shadow: 0 0 6px rgba(55,137,230,0.6);
+}
+.log-name { font-size: 14px; font-weight: 700; flex: 1; }
+.log-time { font-size: 12px; color: rgba(255,255,255,0.3); }
+
+/* ── 空态 / 加载 ── */
+.empty {
+  padding: 48px; text-align: center;
+  color: rgba(255,255,255,0.2); font-size: 14px; line-height: 2;
+}
+.loading-row td { text-align: center; padding: 40px; color: rgba(255,255,255,0.2); font-size: 13px; }
+
+/* ── 移动端 ── */
+@media (max-width: 640px) {
+  body { padding: 24px 16px; }
+  .overview { flex-direction: column; gap: 8px; }
+  .ov-num { font-size: 32px; }
+  thead th:nth-child(4), tbody td:nth-child(4) { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <svg viewBox="0 0 570 570" width="36" height="36" xmlns="http://www.w3.org/2000/svg">
+      <rect width="570" height="570" rx="120" fill="#3789E6"/>
+      <path fill="#fff" d="M468.93,107.4h-76.43c-6.33,0-11.47,5.13-11.47,11.47s5.13,11.47,11.47,11.47h61.33l-36.44,130.97c-1.7,6.1,1.87,12.42,7.97,14.12,1.03.29,2.06.42,3.08.42,5.02,0,9.63-3.32,11.04-8.4l40.49-145.51c.96-3.45.25-7.16-1.92-10.01-2.17-2.85-5.55-4.53-9.13-4.53M380.35,253.08h-65.54l41.02-41.58c14.79-13.29,23.26-32.29,23.26-52.19,0-28.52-23.2-51.72-51.72-51.72s-51.72,23.2-51.72,51.72v1.72c0,6.33,5.13,11.47,11.47,11.47s11.47-5.13,11.47-11.47v-1.72c0-15.87,12.91-28.79,28.79-28.79s28.79,12.91,28.79,28.79c0,13.48-5.78,26.35-15.85,35.31-.19.17-.37.34-.54.52l-60.53,61.35c-3.25,3.29-4.2,8.21-2.42,12.48,1.78,4.27,5.96,7.04,10.58,7.04h92.96c6.33,0,11.47-5.13,11.47-11.47s-5.13-11.47-11.47-11.47M108.93,110.79c-4.48-4.48-11.74-4.48-16.22,0s-4.48,11.74,0,16.22l64.66,64.66-64.66,64.66c-4.48,4.48-4.48,11.74,0,16.22,2.24,2.24,5.17,3.36,8.11,3.36s5.87-1.12,8.11-3.36l72.77-72.77c2.15-2.15,3.36-5.07,3.36-8.11s-1.21-5.96-3.36-8.11l-72.77-72.77ZM243.35,110.79l-43.68,43.68c-4.48,4.48-4.48,11.74,0,16.22,2.24,2.24,5.17,3.36,8.11,3.36s5.87-1.12,8.11-3.36l43.68-43.68c4.48-4.48,4.48-11.74,0-16.22-4.48-4.48-11.74-4.48-16.22,0M215.27,212.03c-4.48-4.48-11.74-4.48-16.22,0-4.48,4.48-4.48,11.74,0,16.22l44.3,44.3c2.24,2.24,5.17,3.36,8.11,3.36s5.87-1.12,8.11-3.36c4.48-4.48,4.48-11.74,0-16.22l-44.3-44.3Z"/>
+    </svg>
+    <div>
+      <div class="topbar-title">链接数据看板</div>
+      <div class="topbar-sub">X27MINI · 商务展示追踪</div>
+    </div>
+  </div>
+  <button class="btn-refresh" id="btn-refresh" onclick="loadData()">刷新数据</button>
+</div>
+
+<!-- 概览 -->
+<div class="overview">
+  <div class="ov-card">
+    <div class="ov-label">总访问次数</div>
+    <div class="ov-num" id="ov-total">—<span>次</span></div>
+  </div>
+  <div class="ov-card">
+    <div class="ov-label">商务人员数</div>
+    <div class="ov-num" id="ov-persons">—<span>人</span></div>
+  </div>
+  <div class="ov-card">
+    <div class="ov-label">今日访问</div>
+    <div class="ov-num" id="ov-today">—<span>次</span></div>
+  </div>
+</div>
+
+<!-- 按人员汇总 -->
+<div class="section-title">按商务人员汇总</div>
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>商务姓名</th>
+        <th>访问次数</th>
+        <th>最近访问</th>
+        <th>占比</th>
+      </tr>
+    </thead>
+    <tbody id="person-table">
+      <tr class="loading-row"><td colspan="4">加载中...</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 最近访问记录 -->
+<div class="section-title">最近访问记录</div>
+<div class="table-wrap" id="log-list">
+  <div class="empty">加载中...</div>
+</div>
+
+<script>
+const SB_URL = 'https://ytnjyslwzihjkrulmrwa.supabase.co';
+const SB_KEY = 'sb_publishable_yY0oqXD7-onj5XBQ_D3ylA_RW-BLKfC';
+
+function fmt(ts) {
+  const d = new Date(ts);
+  const now = new Date();
+  const diff = (now - d) / 1000;
+  if (diff < 60)   return '刚刚';
+  if (diff < 3600) return Math.floor(diff/60) + ' 分钟前';
+  if (diff < 86400) return Math.floor(diff/3600) + ' 小时前';
+  return d.toLocaleDateString('zh-CN', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+
+async function loadData() {
+  const btn = document.getElementById('btn-refresh');
+  btn.textContent = '刷新中…'; btn.classList.add('loading');
+
+  try {
+    const res = await fetch(
+      `${SB_URL}/rest/v1/link_opens?select=*&order=opened_at.desc&limit=200`,
+      { headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` } }
+    );
+    const rows = await res.json();
+
+    if (!Array.isArray(rows)) throw new Error('返回格式异常');
+
+    // 概览
+    const today = new Date(); today.setHours(0,0,0,0);
+    const todayCount = rows.filter(r => new Date(r.opened_at) >= today).length;
+    const persons = [...new Set(rows.map(r => r.person_name).filter(Boolean))];
+
+    document.getElementById('ov-total').innerHTML   = `${rows.length}<span>次</span>`;
+    document.getElementById('ov-persons').innerHTML = `${persons.length}<span>人</span>`;
+    document.getElementById('ov-today').innerHTML   = `${todayCount}<span>次</span>`;
+
+    // 按人汇总
+    const byPerson = {};
+    rows.forEach(r => {
+      const n = r.person_name || '未知';
+      if (!byPerson[n]) byPerson[n] = { count: 0, last: r.opened_at };
+      byPerson[n].count++;
+      if (r.opened_at > byPerson[n].last) byPerson[n].last = r.opened_at;
+    });
+    const sorted = Object.entries(byPerson).sort((a,b) => b[1].count - a[1].count);
+    const maxCount = sorted[0]?.[1].count || 1;
+
+    const tbody = document.getElementById('person-table');
+    if (!sorted.length) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:40px;color:rgba(255,255,255,0.2);font-size:13px;">暂无数据，链接尚未被访问</td></tr>';
+    } else {
+      tbody.innerHTML = sorted.map(([name, d]) => {
+        const pct = Math.round(d.count / rows.length * 100);
+        const barW = Math.round(d.count / maxCount * 100);
+        const hot  = d.count >= 10 ? 'hot' : '';
+        return `<tr>
+          <td class="td-name">${name}</td>
+          <td><span class="td-count ${hot}">${d.count}</span></td>
+          <td class="td-time">${fmt(d.last)}</td>
+          <td class="td-bar-wrap">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="td-bar" style="flex:1"><div class="td-bar-fill" style="width:${barW}%"></div></div>
+              <span style="font-size:11px;color:rgba(255,255,255,0.3);width:28px;text-align:right">${pct}%</span>
+            </div>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    // 最近记录
+    const logEl = document.getElementById('log-list');
+    const recent = rows.slice(0, 30);
+    if (!recent.length) {
+      logEl.innerHTML = '<div class="empty">暂无访问记录</div>';
+    } else {
+      logEl.innerHTML = recent.map(r => `
+        <div class="log-item">
+          <div class="log-dot"></div>
+          <div class="log-name">${r.person_name || '未知'}</div>
+          <div class="log-time">${fmt(r.opened_at)}</div>
+        </div>
+      `).join('');
+    }
+  } catch(e) {
+    document.getElementById('person-table').innerHTML =
+      '<tr><td colspan="4" style="text-align:center;padding:40px;color:#f87171;font-size:13px;">加载失败，请检查网络后刷新</td></tr>';
+  }
+
+  btn.textContent = '刷新数据'; btn.classList.remove('loading');
+}
+
+// 自动刷新
+loadData();
+setInterval(loadData, 30000);
+</script>
+</body>
+</html>
