@@ -1103,19 +1103,19 @@ body {
     <div class="contact-cards">
       <div class="cc reveal delay-1">
         <div class="cc-label">商务负责人</div>
-        <div class="cc-val">苏洁</div>
+        <div class="cc-val" id="c-name">苏洁</div>
       </div>
       <div class="cc reveal delay-2">
         <div class="cc-label">联系电话</div>
-        <div class="cc-val">13764252133</div>
+        <div class="cc-val" id="c-tel">13764252133</div>
       </div>
       <div class="cc reveal delay-3">
         <div class="cc-label">微信</div>
-        <div class="cc-val">13764252133</div>
+        <div class="cc-val" id="c-wx">13764252133</div>
       </div>
       <div class="cc reveal delay-4">
         <div class="cc-label">邮箱</div>
-        <div class="cc-val">bianjing@yowant.com</div>
+        <div class="cc-val" id="c-email">bianjing@yowant.com</div>
       </div>
     </div>
     <div class="contact-slogan reveal delay-3">
@@ -1126,6 +1126,15 @@ body {
 </section>
 
 <script>
+// ─── URL 参数覆盖联系信息 ───
+(function() {
+  const p = new URLSearchParams(window.location.search);
+  if (p.get('name'))  document.getElementById('c-name').textContent  = p.get('name');
+  if (p.get('tel'))   document.getElementById('c-tel').textContent   = p.get('tel');
+  if (p.get('wx'))    document.getElementById('c-wx').textContent    = p.get('wx');
+  if (p.get('email')) document.getElementById('c-email').textContent = p.get('email');
+})();
+
 // ─── 滚动进度条 ───
 window.addEventListener('scroll', () => {
   const scrollTop = window.scrollY;
