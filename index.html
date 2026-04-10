@@ -1186,6 +1186,27 @@ body {
 </section>
 
 <script>
+// ─── Supabase 访问追踪 ───
+const SB_URL  = 'https://ytnjyslwzihjkrulmrwa.supabase.co';
+const SB_KEY  = 'sb_publishable_yY0oqXD7-onj5XBQ_D3ylA_RW-BLKfC';
+
+function trackOpen(name) {
+  if (!name) return;
+  fetch(`${SB_URL}/rest/v1/link_opens`, {
+    method: 'POST',
+    headers: {
+      'apikey': SB_KEY,
+      'Authorization': `Bearer ${SB_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify({
+      person_name: name,
+      user_agent: navigator.userAgent
+    })
+  }).catch(() => {});
+}
+
 // ─── 访问码解密逻辑 ───
 let _encData = null;
 
@@ -1219,6 +1240,7 @@ async function unlock() {
   try {
     const contact = await decryptData(_encData, code);
     fillContact(contact);
+    trackOpen(contact.name);
     document.getElementById('lock-overlay').classList.remove('show');
   } catch {
     input.classList.add('error');
@@ -1240,7 +1262,10 @@ async function unlock() {
   // 明文链接：?name=...
   const p = new URLSearchParams(window.location.search);
   const c = { name: p.get('name'), tel: p.get('tel'), wx: p.get('wx'), email: p.get('email') };
-  if (c.name || c.tel) fillContact(c);
+  if (c.name || c.tel) {
+    fillContact(c);
+    trackOpen(c.name);
+  }
 })();
 
 // ─── 滚动进度条 ───
