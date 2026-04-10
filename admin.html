@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>X27MINI · 商务链接生成器</title>
+<style>
+:root { --blue: #3789E6; --dark: #060e1f; --dark2: #0a1628; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--dark);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+.wrap {
+  width: 100%;
+  max-width: 560px;
+}
+
+/* ── Logo ── */
+.top-logo {
+  text-align: center;
+  margin-bottom: 40px;
+}
+.top-logo .brand {
+  font-size: 11px;
+  letter-spacing: 4px;
+  color: rgba(255,255,255,0.25);
+  text-transform: uppercase;
+  margin-top: 12px;
+}
+
+/* ── 卡片 ── */
+.card {
+  background: var(--dark2);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 20px;
+  padding: 40px;
+}
+.card-title {
+  font-size: 22px;
+  font-weight: 900;
+  color: #fff;
+  margin-bottom: 6px;
+}
+.card-sub {
+  font-size: 13px;
+  color: rgba(255,255,255,0.35);
+  margin-bottom: 36px;
+  line-height: 1.6;
+}
+
+/* ── 表单 ── */
+.field { margin-bottom: 20px; }
+.field label {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: rgba(55,137,230,0.8);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+.field input {
+  width: 100%;
+  padding: 14px 18px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  font-size: 15px;
+  color: #fff;
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+  font-family: inherit;
+}
+.field input::placeholder { color: rgba(255,255,255,0.2); }
+.field input:focus {
+  border-color: rgba(55,137,230,0.5);
+  background: rgba(55,137,230,0.06);
+}
+
+/* ── 生成按钮 ── */
+.btn-gen {
+  width: 100%;
+  padding: 16px;
+  background: var(--blue);
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #fff;
+  cursor: pointer;
+  margin-top: 8px;
+  letter-spacing: 1px;
+  transition: opacity 0.2s, transform 0.15s;
+}
+.btn-gen:hover { opacity: 0.88; }
+.btn-gen:active { transform: scale(0.98); }
+
+/* ── 结果区 ── */
+.result {
+  margin-top: 28px;
+  display: none;
+}
+.result.show { display: block; }
+.result-label {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: rgba(255,255,255,0.3);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.result-box {
+  background: rgba(55,137,230,0.08);
+  border: 1px solid rgba(55,137,230,0.2);
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.result-url {
+  flex: 1;
+  font-size: 12px;
+  color: rgba(255,255,255,0.6);
+  word-break: break-all;
+  line-height: 1.7;
+}
+.btn-copy {
+  flex-shrink: 0;
+  padding: 8px 18px;
+  background: var(--blue);
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+}
+.btn-copy:hover { opacity: 0.85; }
+.btn-copy.copied {
+  background: #22c55e;
+}
+
+/* ── 预览提示 ── */
+.preview-hint {
+  margin-top: 14px;
+  text-align: center;
+}
+.btn-preview {
+  font-size: 12px;
+  color: rgba(55,137,230,0.7);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.btn-preview:hover { color: var(--blue); }
+
+/* ── 已保存的商务列表 ── */
+.saved {
+  margin-top: 32px;
+}
+.saved-title {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: rgba(255,255,255,0.25);
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+.saved-list { display: flex; flex-direction: column; gap: 8px; }
+.saved-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px;
+  padding: 12px 16px;
+  gap: 12px;
+}
+.saved-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+}
+.saved-tel {
+  font-size: 12px;
+  color: rgba(255,255,255,0.35);
+  margin-top: 2px;
+}
+.saved-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.btn-sm {
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.2s;
+}
+.btn-sm:hover { opacity: 0.8; }
+.btn-load { background: rgba(55,137,230,0.15); color: var(--blue); }
+.btn-del  { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.4); }
+.btn-copylink { background: var(--blue); color: #fff; }
+
+.empty-tip {
+  font-size: 12px;
+  color: rgba(255,255,255,0.18);
+  text-align: center;
+  padding: 12px 0;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top-logo">
+    <svg viewBox="0 0 570 570" width="48" height="48" xmlns="http://www.w3.org/2000/svg">
+      <rect width="570" height="570" rx="120" fill="#3789E6"/>
+      <path fill="#fff" d="M468.93,107.4h-76.43c-6.33,0-11.47,5.13-11.47,11.47s5.13,11.47,11.47,11.47h61.33l-36.44,130.97c-1.7,6.1,1.87,12.42,7.97,14.12,1.03.29,2.06.42,3.08.42,5.02,0,9.63-3.32,11.04-8.4l40.49-145.51c.96-3.45.25-7.16-1.92-10.01-2.17-2.85-5.55-4.53-9.13-4.53M380.35,253.08h-65.54l41.02-41.58c14.79-13.29,23.26-32.29,23.26-52.19,0-28.52-23.2-51.72-51.72-51.72s-51.72,23.2-51.72,51.72v1.72c0,6.33,5.13,11.47,11.47,11.47s11.47-5.13,11.47-11.47v-1.72c0-15.87,12.91-28.79,28.79-28.79s28.79,12.91,28.79,28.79c0,13.48-5.78,26.35-15.85,35.31-.19.17-.37.34-.54.52l-60.53,61.35c-3.25,3.29-4.2,8.21-2.42,12.48,1.78,4.27,5.96,7.04,10.58,7.04h92.96c6.33,0,11.47-5.13,11.47-11.47s-5.13-11.47-11.47-11.47M108.93,110.79c-4.48-4.48-11.74-4.48-16.22,0s-4.48,11.74,0,16.22l64.66,64.66-64.66,64.66c-4.48,4.48-4.48,11.74,0,16.22,2.24,2.24,5.17,3.36,8.11,3.36s5.87-1.12,8.11-3.36l72.77-72.77c2.15-2.15,3.36-5.07,3.36-8.11s-1.21-5.96-3.36-8.11l-72.77-72.77ZM243.35,110.79l-43.68,43.68c-4.48,4.48-4.48,11.74,0,16.22,2.24,2.24,5.17,3.36,8.11,3.36s5.87-1.12,8.11-3.36l43.68-43.68c4.48-4.48,4.48-11.74,0-16.22-4.48-4.48-11.74-4.48-16.22,0M215.27,212.03c-4.48-4.48-11.74-4.48-16.22,0-4.48,4.48-4.48,11.74,0,16.22l44.3,44.3c2.24,2.24,5.17,3.36,8.11,3.36s5.87-1.12,8.11-3.36c4.48-4.48,4.48-11.74,0-16.22l-44.3-44.3Z"/>
+      <path fill="#fff" d="M253.57,462.6c-6.31,0-11.42-5.11-11.42-11.42v-111.91l-56.4,73.78c-2.16,2.83-5.52,4.49-9.07,4.49s-6.91-1.66-9.08-4.49l-56.4-73.78v111.91c0,6.31-5.11,11.42-11.42,11.42s-11.42-5.11-11.42-11.42v-145.67c0-4.9,3.12-9.25,7.76-10.82,4.64-1.57,9.76,0,12.74,3.88l67.82,88.72,67.82-88.72c2.97-3.89,8.1-5.45,12.74-3.88,4.64,1.57,7.76,5.92,7.76,10.82v145.67c0,6.31-5.11,11.42-11.42,11.42M298.63,462.6c-6.31,0-11.42-5.11-11.42-11.42v-105.3c0-6.31,5.11-11.42,11.42-11.42s11.42,5.11,11.42,11.42v105.3c0,6.31-5.11,11.42-11.42,11.42M311.64,306.6c0-7.19-5.83-13.01-13.01-13.01s-13.01,5.83-13.01,13.01,5.83,13.01,13.01,13.01,13.01-5.83,13.01-13.01M481.65,306.6c0-7.19-5.83-13.01-13.01-13.01s-13.01,5.83-13.01,13.01,5.83,13.01,13.01,13.01,13.01-5.83,13.01-13.01M468.63,462.6c-6.31,0-11.42-5.11-11.42-11.42v-105.3c0-6.31,5.11-11.42,11.42-11.42s11.42,5.11,11.42,11.42v105.3c0,6.31-5.11,11.42-11.42,11.42M402.82,337.71c-30.96-11.14-47.7,10.78-47.7,10.78l-.64-4.45c-13.42,9.49-22.21,25.12-22.21,42.77v64.36c0,6.31,5.11,11.42,11.42,11.42s11.42-5.11,11.42-11.42v-64.36c0-16.28,13.24-29.52,29.52-29.52s29.52,13.24,29.52,29.52v64.36c0,6.31,5.11,11.42,11.42,11.42s11.42-5.11,11.42-11.42v-64.36c0-22.48-14.24-41.69-34.18-49.1M343.69,398.34c-6.31,0-11.42-5.11-11.42-11.42v-40.94c0-6.31,5.11-11.42,11.42-11.42s11.42,5.11,11.42,11.42v40.94c0,6.31-5.11,11.42-11.42,11.42"/>
+    </svg>
+    <div class="brand">商务链接生成器</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">生成专属展示链接</div>
+    <div class="card-sub">填写商务信息，生成带有个人联系方式的专属品牌手册链接。</div>
+
+    <div class="field">
+      <label>商务负责人姓名</label>
+      <input type="text" id="f-name" placeholder="例：苏洁">
+    </div>
+    <div class="field">
+      <label>联系电话</label>
+      <input type="tel" id="f-tel" placeholder="例：13764252133">
+    </div>
+    <div class="field">
+      <label>微信号</label>
+      <input type="text" id="f-wx" placeholder="例：13764252133">
+    </div>
+    <div class="field">
+      <label>邮箱</label>
+      <input type="email" id="f-email" placeholder="例：name@yowant.com">
+    </div>
+
+    <button class="btn-gen" onclick="generate()">生成专属链接</button>
+
+    <div class="result" id="result">
+      <div class="result-label">你的专属链接</div>
+      <div class="result-box">
+        <div class="result-url" id="result-url"></div>
+        <button class="btn-copy" id="btn-copy" onclick="copyLink()">复制</button>
+      </div>
+      <div class="preview-hint">
+        <button class="btn-preview" onclick="previewLink()">在新标签页预览 →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 已保存的商务 -->
+  <div class="saved" id="saved-wrap" style="display:none">
+    <div class="saved-title">已保存的商务</div>
+    <div class="saved-list" id="saved-list"></div>
+  </div>
+
+</div>
+
+<script>
+const BASE = 'https://mingshuox27.github.io/x27mini/';
+let currentUrl = '';
+
+function generate() {
+  const name  = document.getElementById('f-name').value.trim();
+  const tel   = document.getElementById('f-tel').value.trim();
+  const wx    = document.getElementById('f-wx').value.trim();
+  const email = document.getElementById('f-email').value.trim();
+
+  if (!name) { alert('请填写商务负责人姓名'); return; }
+
+  const params = new URLSearchParams();
+  if (name)  params.set('name',  name);
+  if (tel)   params.set('tel',   tel);
+  if (wx)    params.set('wx',    wx);
+  if (email) params.set('email', email);
+
+  currentUrl = BASE + '?' + params.toString();
+  document.getElementById('result-url').textContent = currentUrl;
+  document.getElementById('result').classList.add('show');
+
+  const copyBtn = document.getElementById('btn-copy');
+  copyBtn.textContent = '复制';
+  copyBtn.classList.remove('copied');
+
+  // 自动保存到本地
+  saveContact({ name, tel, wx, email });
+  renderSaved();
+}
+
+function copyLink() {
+  navigator.clipboard.writeText(currentUrl).then(() => {
+    const btn = document.getElementById('btn-copy');
+    btn.textContent = '已复制 ✓';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '复制'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+function previewLink() {
+  window.open(currentUrl, '_blank');
+}
+
+// ── 本地存储 ──
+function saveContact(c) {
+  let list = JSON.parse(localStorage.getItem('x27_contacts') || '[]');
+  const idx = list.findIndex(x => x.name === c.name);
+  if (idx >= 0) list[idx] = c; else list.unshift(c);
+  localStorage.setItem('x27_contacts', JSON.stringify(list));
+}
+
+function loadContacts() {
+  return JSON.parse(localStorage.getItem('x27_contacts') || '[]');
+}
+
+function deleteContact(name) {
+  let list = loadContacts().filter(x => x.name !== name);
+  localStorage.setItem('x27_contacts', JSON.stringify(list));
+  renderSaved();
+}
+
+function loadIntoForm(c) {
+  document.getElementById('f-name').value  = c.name  || '';
+  document.getElementById('f-tel').value   = c.tel   || '';
+  document.getElementById('f-wx').value    = c.wx    || '';
+  document.getElementById('f-email').value = c.email || '';
+  generate();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function copyContactLink(c) {
+  const params = new URLSearchParams();
+  if (c.name)  params.set('name',  c.name);
+  if (c.tel)   params.set('tel',   c.tel);
+  if (c.wx)    params.set('wx',    c.wx);
+  if (c.email) params.set('email', c.email);
+  const url = BASE + '?' + params.toString();
+  navigator.clipboard.writeText(url).then(() => {
+    alert(`已复制 ${c.name} 的链接`);
+  });
+}
+
+function renderSaved() {
+  const list = loadContacts();
+  const wrap = document.getElementById('saved-wrap');
+  const el   = document.getElementById('saved-list');
+  if (!list.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  el.innerHTML = list.map(c => `
+    <div class="saved-item">
+      <div>
+        <div class="saved-name">${c.name}</div>
+        <div class="saved-tel">${c.tel || ''}</div>
+      </div>
+      <div class="saved-actions">
+        <button class="btn-sm btn-copylink" onclick='copyContactLink(${JSON.stringify(c)})'>复制链接</button>
+        <button class="btn-sm btn-load" onclick='loadIntoForm(${JSON.stringify(c)})'>编辑</button>
+        <button class="btn-sm btn-del" onclick="deleteContact('${c.name}')">删除</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// 回车触发生成
+document.querySelectorAll('input').forEach(el => {
+  el.addEventListener('keydown', e => { if (e.key === 'Enter') generate(); });
+});
+
+// 初始化渲染已保存
+renderSaved();
+</script>
+</body>
+</html>
