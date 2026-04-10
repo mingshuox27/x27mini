@@ -147,6 +147,43 @@ input:checked + .slider::before { transform: translateX(20px); }
 }
 .btn-preview:hover { color: var(--blue); }
 
+/* ── 海报按钮 ── */
+.btn-poster {
+  width: 100%; margin-top: 10px; padding: 14px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.7);
+  cursor: pointer; transition: background 0.2s, border-color 0.2s;
+  letter-spacing: 1px;
+}
+.btn-poster:hover { background: rgba(55,137,230,0.1); border-color: rgba(55,137,230,0.3); color: #fff; }
+
+/* ── 海报弹窗 ── */
+.poster-overlay {
+  display: none; position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
+  align-items: center; justify-content: center; padding: 24px;
+}
+.poster-overlay.show { display: flex; flex-direction: column; gap: 20px; }
+.poster-actions { display: flex; gap: 12px; }
+.btn-dl {
+  padding: 12px 28px; background: var(--blue); border: none;
+  border-radius: 10px; font-size: 14px; font-weight: 800;
+  color: #fff; cursor: pointer; transition: opacity 0.2s;
+}
+.btn-dl:hover { opacity: 0.85; }
+.btn-close-poster {
+  padding: 12px 20px; background: rgba(255,255,255,0.1); border: none;
+  border-radius: 10px; font-size: 14px; font-weight: 700;
+  color: rgba(255,255,255,0.6); cursor: pointer;
+}
+#poster-canvas { border-radius: 16px; max-width: 100%; max-height: 70vh; }
+  background: none; border: none; cursor: pointer;
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.btn-preview:hover { color: var(--blue); }
+
 /* 已保存 */
 .saved { margin-top: 28px; }
 .saved-title { font-size: 11px; letter-spacing: 2px; color: rgba(255,255,255,0.25); text-transform: uppercase; margin-bottom: 14px; }
@@ -247,9 +284,19 @@ input:checked + .slider::before { transform: translateX(20px); }
       <div class="code-remind" id="code-remind">
         ⚠️ 已开启访问码保护，记得<strong>单独告知</strong>对方访问码：<strong id="remind-code"></strong>
       </div>
+      <button class="btn-poster" onclick="showPoster()">🖼 生成专属海报二维码</button>
       <div class="preview-hint">
         <button class="btn-preview" onclick="previewLink()">在新标签页预览 →</button>
       </div>
+    </div>
+  </div>
+
+  <!-- 海报弹窗 -->
+  <div class="poster-overlay" id="poster-overlay">
+    <canvas id="poster-canvas"></canvas>
+    <div class="poster-actions">
+      <button class="btn-dl" onclick="downloadPoster()">⬇ 保存图片</button>
+      <button class="btn-close-poster" onclick="document.getElementById('poster-overlay').classList.remove('show')">关闭</button>
     </div>
   </div>
 
@@ -396,6 +443,154 @@ document.querySelectorAll('input').forEach(el => {
   el.addEventListener('keydown', e => { if (e.key === 'Enter') generate(); });
 });
 renderSaved();
+
+// ── QR + 海报 ──
+function loadQRLib() {
+  return new Promise((res, rej) => {
+    if (window.QRCode) { res(); return; }
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js';
+    s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+}
+
+async function showPoster() {
+  if (!currentUrl) { alert('请先生成专属链接'); return; }
+  await loadQRLib();
+  const name  = document.getElementById('f-name').value.trim() || '商务专员';
+  const tel   = document.getElementById('f-tel').value.trim();
+  await drawPoster(name, tel, currentUrl);
+  document.getElementById('poster-overlay').classList.add('show');
+}
+
+async function drawPoster(name, tel, url) {
+  const W = 750, H = 1200;
+  const canvas = document.getElementById('poster-canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  // 背景渐变
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0,   '#060e1f');
+  bg.addColorStop(0.5, '#0a1628');
+  bg.addColorStop(1,   '#060e1f');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+  // 右下角光晕
+  const glow = ctx.createRadialGradient(W, H, 0, W, H, 600);
+  glow.addColorStop(0, 'rgba(55,137,230,0.18)');
+  glow.addColorStop(1, 'transparent');
+  ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
+
+  // 顶部蓝色细线
+  ctx.fillStyle = '#3789E6';
+  ctx.fillRect(0, 0, W, 3);
+
+  // ── 品牌标签 ──
+  ctx.font = 'bold 22px -apple-system, PingFang SC, sans-serif';
+  ctx.fillStyle = 'rgba(55,137,230,0.7)';
+  ctx.letterSpacing = '4px';
+  ctx.fillText('X27MINI  ·  美妆闪电仓', 60, 80);
+
+  // 品牌大字
+  ctx.font = 'bold 72px -apple-system, PingFang SC, sans-serif';
+  ctx.fillStyle = '#fff';
+  ctx.fillText('X27', 60, 200);
+  ctx.fillStyle = '#3789E6';
+  ctx.fillText('MINI', 220, 200);
+
+  // 副标题
+  ctx.font = '24px -apple-system, PingFang SC, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.fillText('品  牌  合  作  手  册', 62, 248);
+
+  // 分割线
+  ctx.strokeStyle = 'rgba(55,137,230,0.25)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(60, 285); ctx.lineTo(W - 60, 285); ctx.stroke();
+
+  // 中间说明文字
+  ctx.font = 'bold 32px -apple-system, PingFang SC, sans-serif';
+  ctx.fillStyle = '#fff';
+  ctx.textAlign = 'center';
+  ctx.fillText('扫码查看品牌合作资料', W / 2, 360);
+
+  ctx.font = '22px -apple-system, PingFang SC, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.fillText('即时零售 · 美妆垂类 · 前置仓连锁', W / 2, 400);
+
+  // ── 二维码 ──
+  const QR_SIZE = 320;
+  const qrCanvas = document.createElement('canvas');
+  await QRCode.toCanvas(qrCanvas, url, {
+    width: QR_SIZE, margin: 2,
+    color: { dark: '#ffffff', light: '#0a1628' }
+  });
+  // 白色圆角底板
+  const pad = 20;
+  const qrX = (W - QR_SIZE - pad * 2) / 2;
+  const qrY = 440;
+  roundRect(ctx, qrX, qrY, QR_SIZE + pad * 2, QR_SIZE + pad * 2, 20);
+  ctx.fillStyle = '#0a1628';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(55,137,230,0.3)';
+  ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.drawImage(qrCanvas, qrX + pad, qrY + pad, QR_SIZE, QR_SIZE);
+
+  // ── 商务信息 ──
+  const infoY = qrY + QR_SIZE + pad * 2 + 60;
+
+  ctx.font = 'bold 44px -apple-system, PingFang SC, sans-serif';
+  ctx.fillStyle = '#fff';
+  ctx.textAlign = 'center';
+  ctx.fillText(name, W / 2, infoY);
+
+  ctx.font = '22px -apple-system, PingFang SC, sans-serif';
+  ctx.fillStyle = 'rgba(55,137,230,0.8)';
+  ctx.fillText('商务负责人  ·  X27MINI', W / 2, infoY + 44);
+
+  if (tel) {
+    ctx.font = '22px -apple-system, PingFang SC, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.fillText(tel, W / 2, infoY + 86);
+  }
+
+  // 底部 slogan
+  ctx.font = 'bold 26px -apple-system, PingFang SC, sans-serif';
+  ctx.fillStyle = '#3789E6';
+  ctx.fillText('心动', W / 2 - 130, H - 80);
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.fillText('物超所值  ·', W / 2 - 30, H - 80);
+  ctx.fillStyle = '#3789E6';
+  ctx.fillText('热爱', W / 2 + 130, H - 80);
+
+  ctx.font = '18px -apple-system, PingFang SC, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  ctx.fillText('遥望科技旗下品牌  ·  YOWANT  ·  2026', W / 2, H - 40);
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function downloadPoster() {
+  const name = document.getElementById('f-name').value.trim() || '商务海报';
+  const a = document.createElement('a');
+  a.download = `X27MINI_${name}_海报.png`;
+  a.href = document.getElementById('poster-canvas').toDataURL('image/png');
+  a.click();
+}
 </script>
 </body>
 </html>
