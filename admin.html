@@ -556,18 +556,28 @@ async function drawPoster(name, tel, url) {
     ctx.fillText(tel, W / 2, infoY + 86);
   }
 
-  // 底部 slogan
-  ctx.font = 'bold 26px -apple-system, PingFang SC, sans-serif';
-  ctx.fillStyle = '#3789E6';
-  ctx.fillText('心动', W / 2 - 130, H - 80);
-  ctx.fillStyle = 'rgba(255,255,255,0.7)';
-  ctx.fillText('物超所值  ·', W / 2 - 30, H - 80);
-  ctx.fillStyle = '#3789E6';
-  ctx.fillText('热爱', W / 2 + 130, H - 80);
+  // ── Slogan（分段上色，精确定位）──
+  ctx.textAlign = 'left';
+  ctx.font = 'bold 28px -apple-system, PingFang SC, sans-serif';
+  const segments = [
+    { text: '心动', color: '#3789E6' },
+    { text: '物超所值', color: 'rgba(255,255,255,0.75)' },
+    { text: '  ·  ', color: 'rgba(255,255,255,0.3)' },
+    { text: '热爱', color: '#3789E6' },
+    { text: '即刻兑现', color: 'rgba(255,255,255,0.75)' },
+  ];
+  let totalW = segments.reduce((acc, s) => acc + ctx.measureText(s.text).width, 0);
+  let sx = (W - totalW) / 2;
+  segments.forEach(s => {
+    ctx.fillStyle = s.color;
+    ctx.fillText(s.text, sx, H - 80);
+    sx += ctx.measureText(s.text).width;
+  });
 
   ctx.font = '18px -apple-system, PingFang SC, sans-serif';
   ctx.fillStyle = 'rgba(255,255,255,0.15)';
-  ctx.fillText('遥望科技旗下品牌  ·  YOWANT  ·  2026', W / 2, H - 40);
+  ctx.textAlign = 'center';
+  ctx.fillText('遥望科技旗下品牌', W / 2, H - 40);
 }
 
 function roundRect(ctx, x, y, w, h, r) {
@@ -586,9 +596,27 @@ function roundRect(ctx, x, y, w, h, r) {
 
 function downloadPoster() {
   const name = document.getElementById('f-name').value.trim() || '商务海报';
+  const canvas = document.getElementById('poster-canvas');
+  const dataUrl = canvas.toDataURL('image/png');
+
+  // 移动端：在新标签页打开图片，长按保存
+  const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
+  if (isMobile) {
+    const win = window.open('', '_blank');
+    win.document.write(`
+      <html><head><meta name="viewport" content="width=device-width,initial-scale=1">
+      <style>body{margin:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px}
+      img{max-width:100%;border-radius:12px}
+      p{color:rgba(255,255,255,0.5);font-size:14px;font-family:sans-serif;text-align:center;padding:0 20px}</style></head>
+      <body><img src="${dataUrl}"><p>长按图片 → 保存到相册</p></body></html>
+    `);
+    win.document.close();
+    return;
+  }
+  // 桌面端：直接下载
   const a = document.createElement('a');
   a.download = `X27MINI_${name}_海报.png`;
-  a.href = document.getElementById('poster-canvas').toDataURL('image/png');
+  a.href = dataUrl;
   a.click();
 }
 </script>
