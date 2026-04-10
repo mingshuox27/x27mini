@@ -178,7 +178,15 @@ input:checked + .slider::before { transform: translateX(20px); }
   border-radius: 10px; font-size: 14px; font-weight: 700;
   color: rgba(255,255,255,0.6); cursor: pointer;
 }
-#poster-canvas { border-radius: 16px; max-width: 100%; max-height: 70vh; }
+#poster-canvas { display: none; }
+#poster-img { border-radius: 16px; max-width: 100%; max-height: 65vh; display: block; }
+.poster-mobile-hint {
+  display: none; font-size: 13px; color: rgba(255,255,255,0.45);
+  text-align: center; line-height: 1.8;
+  padding: 10px 16px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 8px;
+}
   background: none; border: none; cursor: pointer;
   text-decoration: underline; text-underline-offset: 3px;
 }
@@ -294,7 +302,11 @@ input:checked + .slider::before { transform: translateX(20px); }
   <!-- 海报弹窗 -->
   <div class="poster-overlay" id="poster-overlay">
     <canvas id="poster-canvas"></canvas>
-    <div class="poster-actions">
+    <img id="poster-img" alt="专属海报">
+    <div class="poster-mobile-hint" id="poster-mobile-hint">
+      长按上方图片 → 保存到相册
+    </div>
+    <div class="poster-actions" id="poster-actions">
       <button class="btn-dl" onclick="downloadPoster()">⬇ 保存图片</button>
       <button class="btn-close-poster" onclick="document.getElementById('poster-overlay').classList.remove('show')">关闭</button>
     </div>
@@ -461,6 +473,16 @@ async function showPoster() {
   const name  = document.getElementById('f-name').value.trim() || '商务专员';
   const tel   = document.getElementById('f-tel').value.trim();
   await drawPoster(name, tel, currentUrl);
+
+  // 把 canvas 转成 img（iOS 微信可长按 img 保存，canvas 不行）
+  const canvas = document.getElementById('poster-canvas');
+  const img = document.getElementById('poster-img');
+  img.src = canvas.toDataURL('image/png');
+
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  document.getElementById('poster-mobile-hint').style.display = isMobile ? 'block' : 'none';
+  document.getElementById('poster-actions').style.display     = isMobile ? 'none'  : 'flex';
+
   document.getElementById('poster-overlay').classList.add('show');
 }
 
@@ -597,26 +619,9 @@ function roundRect(ctx, x, y, w, h, r) {
 function downloadPoster() {
   const name = document.getElementById('f-name').value.trim() || '商务海报';
   const canvas = document.getElementById('poster-canvas');
-  const dataUrl = canvas.toDataURL('image/png');
-
-  // 移动端：在新标签页打开图片，长按保存
-  const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
-  if (isMobile) {
-    const win = window.open('', '_blank');
-    win.document.write(`
-      <html><head><meta name="viewport" content="width=device-width,initial-scale=1">
-      <style>body{margin:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px}
-      img{max-width:100%;border-radius:12px}
-      p{color:rgba(255,255,255,0.5);font-size:14px;font-family:sans-serif;text-align:center;padding:0 20px}</style></head>
-      <body><img src="${dataUrl}"><p>长按图片 → 保存到相册</p></body></html>
-    `);
-    win.document.close();
-    return;
-  }
-  // 桌面端：直接下载
   const a = document.createElement('a');
   a.download = `X27MINI_${name}_海报.png`;
-  a.href = dataUrl;
+  a.href = canvas.toDataURL('image/png');
   a.click();
 }
 </script>
